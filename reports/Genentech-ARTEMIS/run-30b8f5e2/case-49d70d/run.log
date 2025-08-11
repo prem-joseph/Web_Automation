@@ -1,0 +1,6 @@
+Starting auto playback for case case-49d70d...
+ERROR: Traceback (most recent call last):
+ERROR:   File "C:\Users\u1111412\OneDrive - IQVIA\Documents\PycharmProjects\Python Automation\4-Multi Feature Test Automation Tool\playback_runner.py", line 17, in <module>
+ERROR:     import win32gui
+ERROR: ModuleNotFoundError: No module named 'win32gui'
+Playback finished.

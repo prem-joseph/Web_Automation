@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Test Execution Report</title>
+    <style>
+        @page { size: A4; margin: 1cm; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; font-size: 10pt; color: #333; }
+        .container { width: 100%; margin: 0 auto; }
+        h1 { text-align: center; color: #0056b3; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 10px;}
+        h2 { color: #0056b3; border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top: 20px; font-size: 1.2em; }
+        
+        .execution-summary-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; text-align: center; }
+        .execution-summary-table td { padding: 15px; border: 1px solid #ddd; }
+        .summary-box .count { font-size: 2em; font-weight: bold; }
+        .summary-box .label { font-size: 1em; }
+        .total .count { color: #007bff; }
+        .passed .count { color: #28a745; }
+        .failed .count { color: #dc3545; }
+
+        .case-details { page-break-inside: avoid; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 5px; padding: 10px; }
+        .summary-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+        .summary-table th, .summary-table td { border: 1px solid #ddd; padding: 6px; text-align: left; font-size: 9pt; }
+        .summary-table th { background-color: #f2f2f2; width: 15%; }
+        .status-PASSED { color: #28a745; font-weight: bold; }
+        .status-FAILED { color: #dc3545; font-weight: bold; }
+        .status-UNKNOWN { color: #ffc107; font-weight: bold; }
+        .log-table { width: 100%; border-collapse: collapse; margin-top: 10px; table-layout: fixed; }
+        .log-table th, .log-table td { border: 1px solid #ddd; padding: 5px; text-align: left; vertical-align: top; word-wrap: break-word; font-size: 8pt; }
+        .log-table th { background-color: #f8f9fa; }
+        .log-table .step-col { width: 75%; }
+        .log-table .screenshot-col { width: 25%; text-align: center; }
+        .thumbnail { max-width: 200px; max-height: 200px; border: 1px solid #ccc; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test Execution Report</h1>
+        <p style="text-align: center; color: #666;">Project: {{ project_name }} | Generated on: {{ report_date }}</p>
+
+        <table class="execution-summary-table">
+            <tr>
+                <td class="summary-box total">
+                    <div class="count">{{ total_run }}</div>
+                    <div class="label">Executed</div>
+                </td>
+                <td class="summary-box passed">
+                    <div class="count">{{ total_passed }}</div>
+                    <div class="label">Passed</div>
+                </td>
+                <td class="summary-box failed">
+                    <div class="count">{{ total_failed }}</div>
+                    <div class="label">Failed</div>
+                </td>
+            </tr>
+        </table>
+
+        {% for result in test_results %}
+            <div class="case-details">
+                <h2>Test Case: {{ result.title }}</h2>
+                <table class="summary-table">
+                    <tr>
+                        <th>Status</th>
+                        <td><span class="status-{{ result.status }}">{{ result.status }}</span></td>
+                    </tr>
+                    <tr>
+                        <th>Start Time</th>
+                        <td>{{ result.start_time }}</td>
+                    </tr>
+                     <tr>
+                        <th>End Time</th>
+                        <td>{{ result.end_time }}</td>
+                    </tr>
+                </table>
+
+                <table class="log-table">
+                    <thead>
+                        <tr>
+                            <th class="step-col">Step Details</th>
+                            <th class="screenshot-col">Screenshot</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log_entry in result.logs %}
+                            {% if log_entry.text.strip() %}
+                            <tr>
+                                <td>{{ log_entry.text }}</td>
+                                <td class="screenshot-col">
+                                    {% if log_entry.screenshot %}
+                                        <a href="{{ log_entry.screenshot }}" target="_blank">
+                                            <img src="{{ log_entry.screenshot }}" alt="Screenshot" class="thumbnail">
+                                        </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endfor %}
+    </div>
+</body>
+</html>

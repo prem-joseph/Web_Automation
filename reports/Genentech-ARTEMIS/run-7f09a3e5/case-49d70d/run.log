@@ -1,0 +1,117 @@
+Starting auto playback for case case-49d70d...
+--- Starting Selenium Playback ---
+[17:25:23] Executing step 1: NAVIGATE
+[17:25:23] Page load complete.
+[17:25:23] Could not find window for PID: 26996
+[17:25:33] Could not find window for PID: 26996
+[17:25:33] Step 1 PASSED
+[17:25:34] Screenshot saved: reports\Genentech-ARTEMIS\run-7f09a3e5\case-49d70d\step_1_NAVIGATE_PASSED.png
+[17:25:34] Executing step 2: CLICK
+[17:25:34] Page load complete.
+[17:25:34] Could not find window for PID: 26996
+[17:25:34] Step 2 PASSED
+[17:25:35] Screenshot saved: reports\Genentech-ARTEMIS\run-7f09a3e5\case-49d70d\step_2_CLICK_PASSED.png
+[17:25:35] Executing step 3: TYPE
+[17:25:35] Page load complete.
+[17:25:35] Could not find window for PID: 26996
+[17:25:36] Step 3 PASSED
+[17:25:36] Screenshot saved: reports\Genentech-ARTEMIS\run-7f09a3e5\case-49d70d\step_3_TYPE_PASSED.png
+[17:25:36] Executing step 4: KEYPRESS
+[17:25:36] Page load complete.
+[17:25:36] Could not find window for PID: 26996
+[17:25:37] Step 4 PASSED
+[17:25:37] Screenshot saved: reports\Genentech-ARTEMIS\run-7f09a3e5\case-49d70d\step_4_KEYPRESS_PASSED.png
+[17:25:37] Executing step 5: TYPE
+[17:25:37] Page load complete.
+[17:25:37] Could not find window for PID: 26996
+[17:25:38] Step 5 PASSED
+[17:25:38] Screenshot saved: reports\Genentech-ARTEMIS\run-7f09a3e5\case-49d70d\step_5_TYPE_PASSED.png
+[17:25:38] Executing step 6: CLICK
+[17:25:38] Page load complete.
+[17:25:38] Could not find window for PID: 26996
+[17:25:43] Step 6 PASSED
+[17:25:44] Screenshot saved: reports\Genentech-ARTEMIS\run-7f09a3e5\case-49d70d\step_6_CLICK_PASSED.png
+[17:25:44] Executing step 7: NAVIGATE
+[17:25:44] Page load complete.
+[17:25:44] Could not find window for PID: 26996
+[17:25:45] Could not find window for PID: 26996
+[17:25:45] Step 7 PASSED
+[17:25:45] Screenshot saved: reports\Genentech-ARTEMIS\run-7f09a3e5\case-49d70d\step_7_NAVIGATE_PASSED.png
+[17:25:45] Executing step 8: NAVIGATE
+[17:25:45] Page load complete.
+[17:25:45] Could not find window for PID: 26996
+[17:25:47] Could not find window for PID: 26996
+[17:25:47] Step 8 PASSED
+[17:25:47] Screenshot saved: reports\Genentech-ARTEMIS\run-7f09a3e5\case-49d70d\step_8_NAVIGATE_PASSED.png
+[17:25:47] Executing step 9: ELEMENT_TEXT_IS
+[17:25:47] Page load complete.
+[17:25:47] Could not find window for PID: 26996
+[17:25:48] Step 9 PASSED
+[17:25:48] Screenshot saved: reports\Genentech-ARTEMIS\run-7f09a3e5\case-49d70d\step_9_ELEMENT_TEXT_IS_PASSED.png
+[17:25:48] Executing step 10: ELEMENT_CONTAINS_TEXT
+[17:25:48] Page load complete.
+[17:25:48] Could not find window for PID: 26996
+[17:25:49] Step 10 PASSED
+[17:25:49] Screenshot saved: reports\Genentech-ARTEMIS\run-7f09a3e5\case-49d70d\step_10_ELEMENT_CONTAINS_TEXT_PASSED.png
+[17:25:49] Executing step 11: ELEMENT_CONTAINS_TEXT
+[17:25:49] Page load complete.
+[17:25:49] Could not find window for PID: 26996
+[17:25:49] Step 11 PASSED
+[17:25:50] Screenshot saved: reports\Genentech-ARTEMIS\run-7f09a3e5\case-49d70d\step_11_ELEMENT_CONTAINS_TEXT_PASSED.png
+[17:25:50] Executing step 12: ELEMENT_TEXT_IS
+[17:25:50] Page load complete.
+[17:25:50] Could not find window for PID: 26996
+[17:25:50] Step 12 PASSED
+[17:25:51] Screenshot saved: reports\Genentech-ARTEMIS\run-7f09a3e5\case-49d70d\step_12_ELEMENT_TEXT_IS_PASSED.png
+[17:25:51] Executing step 13: ELEMENT_TEXT_IS
+[17:25:51] Page load complete.
+[17:25:51] Could not find window for PID: 26996
+[17:25:51] Step 13 PASSED
+[17:25:51] Screenshot saved: reports\Genentech-ARTEMIS\run-7f09a3e5\case-49d70d\step_13_ELEMENT_TEXT_IS_PASSED.png
+[17:25:51] Executing step 14: ELEMENT_TEXT_IS
+[17:25:51] Page load complete.
+[17:25:51] Could not find window for PID: 26996
+[17:25:52] Step 14 PASSED
+[17:25:52] Screenshot saved: reports\Genentech-ARTEMIS\run-7f09a3e5\case-49d70d\step_14_ELEMENT_TEXT_IS_PASSED.png
+[17:25:52] Executing step 15: ELEMENT_TEXT_IS
+[17:25:52] Page load complete.
+[17:25:52] Could not find window for PID: 26996
+[17:25:53] Step 15 PASSED
+[17:25:53] Screenshot saved: reports\Genentech-ARTEMIS\run-7f09a3e5\case-49d70d\step_15_ELEMENT_TEXT_IS_PASSED.png
+[17:25:53] Executing step 16: ELEMENT_TEXT_IS
+[17:25:53] Page load complete.
+[17:25:53] Could not find window for PID: 26996
+[17:25:54] Step 16 PASSED
+[17:25:54] Screenshot saved: reports\Genentech-ARTEMIS\run-7f09a3e5\case-49d70d\step_16_ELEMENT_TEXT_IS_PASSED.png
+[17:25:54] Executing step 17: ELEMENT_TEXT_IS
+[17:25:54] Page load complete.
+[17:25:54] Could not find window for PID: 26996
+[17:25:54] Step 17 PASSED
+[17:25:55] Screenshot saved: reports\Genentech-ARTEMIS\run-7f09a3e5\case-49d70d\step_17_ELEMENT_TEXT_IS_PASSED.png
+[17:25:55] Executing step 18: ELEMENT_TEXT_IS
+[17:25:55] Page load complete.
+[17:25:55] Could not find window for PID: 26996
+[17:25:55] Step 18 PASSED
+[17:25:55] Screenshot saved: reports\Genentech-ARTEMIS\run-7f09a3e5\case-49d70d\step_18_ELEMENT_TEXT_IS_PASSED.png
+[17:25:55] Executing step 19: ELEMENT_TEXT_IS
+[17:25:55] Page load complete.
+[17:25:55] Could not find window for PID: 26996
+[17:25:56] Step 19 PASSED
+[17:25:56] Screenshot saved: reports\Genentech-ARTEMIS\run-7f09a3e5\case-49d70d\step_19_ELEMENT_TEXT_IS_PASSED.png
+[17:25:56] Executing step 20: ELEMENT_TEXT_IS
+[17:25:56] Page load complete.
+[17:25:56] Could not find window for PID: 26996
+[17:25:57] Step 20 PASSED
+[17:25:57] Screenshot saved: reports\Genentech-ARTEMIS\run-7f09a3e5\case-49d70d\step_20_ELEMENT_TEXT_IS_PASSED.png
+[17:25:57] Executing step 21: ELEMENT_TEXT_IS
+[17:25:57] Page load complete.
+[17:25:57] Could not find window for PID: 26996
+[17:25:58] Step 21 PASSED
+[17:25:58] Screenshot saved: reports\Genentech-ARTEMIS\run-7f09a3e5\case-49d70d\step_21_ELEMENT_TEXT_IS_PASSED.png
+[17:25:58] Executing step 22: ELEMENT_TEXT_IS
+[17:25:58] Page load complete.
+[17:25:58] Could not find window for PID: 26996
+[17:25:58] Step 22 PASSED
+[17:25:59] Screenshot saved: reports\Genentech-ARTEMIS\run-7f09a3e5\case-49d70d\step_22_ELEMENT_TEXT_IS_PASSED.png
+[17:25:59] --- Selenium playback finished ---
+Playback finished.

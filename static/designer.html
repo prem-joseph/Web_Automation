@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Test Automation - Designer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css"> </head>
+<body class="bg-gray-900 text-gray-200">
+    <input type="file" id="csv-importer" class="hidden" accept=".csv">
+    <input type="file" id="file-uploader" class="hidden">
+    <div id="app" class="flex h-screen">
+        <aside id="sidebar" class="bg-gray-800 p-4 flex flex-col h-full border-r border-gray-700" style="width: 40%;">
+             <div class="flex items-center justify-between mb-2 pb-2 border-b border-gray-700">
+                <a href="/" class="text-gray-400 hover:text-white" title="Back to Project Hub"><i class="fas fa-home"></i></a>
+                 <div class="flex items-baseline gap-4">
+                   <h1 id="project-name-header" class="text-xl font-bold text-white mx-4 truncate">Loading...</h1>
+                   <h2 id="recording-mode-title" class="text-md font-semibold text-teal-400"></h2>
+                </div>
+                <div class="flex items-center gap-4">
+                    <a id="playback-link" href="#" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md items-center gap-2 hidden" style="display: none;" title="Run Playback for Selected Case">
+                        <i class="fas fa-play"></i><span>Playback</span>
+                    </a>
+                    <button id="save-project-btn" class="text-gray-400 hover:text-white flex-shrink-0" title="Save Project"><i class="fas fa-save"></i></button>
+                </div>
+            </div>
+            <h2 class="text-lg font-semibold text-gray-300 mb-2">Test Explorer</h2>
+            <div id="test-list" class="flex-grow overflow-y-auto pr-2"></div>
+        </aside>
+        <div id="resizer" class="w-1.5 cursor-col-resize bg-gray-700 hover:bg-blue-600 transition-colors"></div>
+        <main class="flex-grow p-6 flex flex-col h-full overflow-y-auto">
+            <div id="main-content-area" class="h-full">
+                <div id="placeholder-view" class="flex flex-col items-center justify-center h-full text-gray-500">
+                    <i class="fas fa-file-alt fa-4x mb-4"></i>
+                    <h3 class="text-xl font-semibold">No Test Case Selected</h3>
+                    <p>Select a test case from the explorer to view its details.</p>
+                </div>
+                <div id="test-case-view" class="hidden h-full flex flex-col">
+                    <div class="flex justify-between items-start mb-2 pb-2 border-b border-gray-700">
+                        <div>
+                            <p id="case-id" class="text-sm text-gray-400"></p>
+                             <h3 id="case-title" class="text-2xl font-bold text-white"></h3>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <div id="tabs-container" class="flex border-b border-gray-700">
+                            <button data-tab="preconditions" class="tab-btn py-2 px-4 text-gray-300 border-b-2 border-blue-500 font-semibold">Preconditions</button>
+                            <button data-tab="separated_steps" class="tab-btn py-2 px-4 text-gray-500 border-b-2 border-transparent font-semibold">Separated Step</button>
+                            <button data-tab="expected_result" class="tab-btn py-2 px-4 text-gray-500 border-b-2 border-transparent font-semibold">Expected Result</button>
+                        </div>
+                        <div class="p-4 bg-gray-800 rounded-b-md">
+                            <div id="tab-content-preconditions" class="tab-content"><textarea id="preconditions-text" class="w-full h-24 bg-gray-700 rounded-md p-2 text-sm"></textarea></div>
+                            <div id="tab-content-separated_steps" class="tab-content hidden"><textarea id="separated_steps-text" class="w-full h-24 bg-gray-700 rounded-md p-2 text-sm"></textarea></div>
+                            <div id="tab-content-expected_result" class="tab-content hidden"><textarea id="expected_result-text" class="w-full h-24 bg-gray-700 rounded-md p-2 text-sm"></textarea></div>
+                        </div>
+                    </div>
+                    <div class="flex-grow flex flex-col min-h-0">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="text-xl font-bold">Automation Steps</h3>
+                            <button id="save-steps-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md flex items-center gap-2">
+                                <i class="fas fa-save"></i><span>Save Steps</span>
+                            </button>
+                             <div class="flex items-center gap-3" id="recorder-controls">
+                                <input type="text" id="url-input" placeholder="http://example.com" class="bg-gray-700 border border-gray-600 rounded-md px-3 py-1.5 w-72 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <button id="record-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md flex items-center gap-2">
+                                    <i id="record-icon" class="fas fa-circle text-xs"></i><span id="record-text">Record</span>
+                                </button>
+                                <button id="pause-btn" class="hidden bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2 px-4 rounded-md flex items-center gap-2">
+                                    <i class="fas fa-pause"></i><span id="pause-text">Pause</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="automation-content-steps" class="flex-grow flex flex-col min-h-0">
+                            <div class="toolbar" id="manual-actions-toolbar">
+                                <div class="toolbar-menu">
+                                    <button class="toolbar-button" data-menu="browser-actions">Browser <i class="fas fa-chevron-down text-xs"></i></button>
+                                    <div class="toolbar-dropdown" id="browser-actions"></div>
+                                </div>
+                                <div class="toolbar-menu">
+                                    <button class="toolbar-button" data-menu="page-actions">Page <i class="fas fa-chevron-down text-xs"></i></button>
+                                    <div class="toolbar-dropdown" id="page-actions"></div>
+                                </div>
+                                <div class="toolbar-menu">
+                                    <button class="toolbar-button" data-menu="interactions-actions">Interactions <i class="fas fa-chevron-down text-xs"></i></button>
+                                    <div class="toolbar-dropdown" id="interactions-actions"></div>
+                                </div>
+                                <div class="toolbar-menu">
+                                    <button class="toolbar-button" data-menu="element-actions">Element <i class="fas fa-chevron-down text-xs"></i></button>
+                                    <div class="toolbar-dropdown" id="element-actions"></div>
+                                </div>
+                                <div class="toolbar-menu">
+                                    <button class="toolbar-button" data-menu="wait-actions">Wait <i class="fas fa-chevron-down text-xs"></i></button>
+                                    <div class="toolbar-dropdown" id="wait-actions"></div>
+                                </div>
+                                <div class="toolbar-menu">
+                                    <button class="toolbar-button" data-menu="assert-actions">Assert <i class="fas fa-chevron-down text-xs"></i></button>
+                                    <div class="toolbar-dropdown" id="assert-actions"></div>
+                                </div>
+                                <div class="toolbar-menu">
+                                    <button class="toolbar-button" data-menu="data-actions">Data <i class="fas fa-chevron-down text-xs"></i></button>
+                                    <div class="toolbar-dropdown" id="data-actions"></div>
+                                </div>
+                                <div class="toolbar-menu">
+                                    <button class="toolbar-button" data-menu="api-actions">API <i class="fas fa-chevron-down text-xs"></i></button>
+                                    <div class="toolbar-dropdown" id="api-actions"></div>
+                                </div>
+                            </div>
+
+                            <div id="steps-container" class="flex-grow flex flex-col min-h-0">
+                                <div id="bulk-step-actions" class="flex items-center justify-between mb-2 p-2 bg-gray-800 rounded-md">
+                                <label class="flex items-center gap-2 text-sm">
+                                        <input type="checkbox" id="select-all-steps" class="form-checkbox bg-gray-700 border-gray-600 text-purple-500 focus:ring-purple-600 h-5 w-5">
+                                        Select All
+                                    </label>
+                                    <button id="delete-all-steps-btn" class="bg-red-800 hover:bg-red-700 text-white font-bold py-1 px-3 rounded-md text-xs">
+                                        Delete All Steps
+                                    </button>
+                                </div>
+                                <div id="steps-list" class="flex-grow overflow-y-auto bg-gray-800 rounded-md p-3 space-y-3"></div>
+                                <div id="bulk-actions-footer" class="hidden mt-2">
+                                    <button id="delete-selected-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md">
+                                        Delete Selected Steps
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <div id="context-menu" class="hidden"></div>
+
+    <div id="modal-backdrop" class="modal-backdrop hidden"></div>
+    <div id="prompt-modal" class="modal hidden">
+        <h3 id="prompt-title" class="text-lg font-bold mb-4"></h3>
+        <div id="prompt-inputs"></div>
+        <div class="modal-actions">
+            <button id="prompt-cancel-btn" class="modal-button-secondary">Cancel</button>
+            <button id="prompt-confirm-btn" class="modal-button-primary">Confirm</button>
+        </div>
+    </div>
+    <div id="confirm-modal" class="modal hidden">
+        <h3 id="confirm-title" class="text-lg font-bold mb-2">Are you sure?</h3>
+        <p id="confirm-message" class="text-gray-400 mb-4"></p>
+        <div class="modal-actions">
+            <button id="confirm-cancel-btn" class="modal-button-secondary">Cancel</button>
+            <button id="confirm-ok-btn" class="modal-button-danger">Confirm</button>
+        </div>
+    </div>
+
+    <script src="/static/designer.js"></script>
+</body>
+</html>

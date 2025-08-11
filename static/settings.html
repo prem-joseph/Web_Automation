@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Web Test Automation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body class="bg-gray-900 text-gray-200">
+    <div class="container mx-auto p-8">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-4xl font-bold text-white">Settings</h1>
+            <a href="/" class="text-purple-400 hover:text-purple-300">Back to Project Hub</a>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div class="bg-gray-800 p-8 rounded-lg shadow-xl">
+                <h2 class="text-2xl font-bold mb-4">TestRail Configuration</h2>
+                <p class="text-sm text-gray-400 mb-4">
+                    These settings are stored as environment variables on the server.
+                    Use the fields below to test your connection. To save them permanently, you must set the
+                    <code class="bg-gray-700 p-1 rounded">.env</code> file on the server.
+                </p>
+                <div class="space-y-4">
+                    <div>
+                        <label for="tms-url" class="block text-sm font-medium text-gray-300">TestRail URL</label>
+                        <input type="text" id="tms-url" placeholder="https://your-instance.testrail.io" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md p-2 focus:ring-purple-500 focus:border-purple-500">
+                    </div>
+                    <div>
+                        <label for="tms-user" class="block text-sm font-medium text-gray-300">Username/Email</label>
+                        <input type="text" id="tms-user" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md p-2 focus:ring-purple-500 focus:border-purple-500">
+                    </div>
+                    <div>
+                        <label for="tms-password" class="block text-sm font-medium text-gray-300">Password (optional, for testing)</label>
+                        <input type="password" id="tms-password" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md p-2 focus:ring-purple-500 focus:border-purple-500">
+                    </div>
+                    <div>
+                        <label for="tms-apikey" class="block text-sm font-medium text-gray-300">API Key (optional, for testing)</label>
+                        <input type="password" id="tms-apikey" class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md p-2 focus:ring-purple-500 focus:border-purple-500">
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-end">
+                     <button id="tms-test-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md">Test Connection</button>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 p-8 rounded-lg shadow-xl">
+                 <h2 class="text-2xl font-bold mb-6 text-center">Recording Mode Selection</h2>
+                  <p class="text-sm text-gray-400 mb-4 text-center">
+                    Enable or disable recording modes. Changes are saved locally in your browser.
+                </p>
+                 <div class="space-y-4">
+                    <div class="flex items-center justify-between p-3 bg-gray-700 rounded-md">
+                        <span class="font-semibold">Automated recording using Selenium & Xpath</span>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-mode-auto" data-mode="auto">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-gray-700 rounded-md">
+                        <span class="font-semibold">NLP-driven Recording</span>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-mode-nlp" data-mode="nlp">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-gray-700 rounded-md">
+                        <span class="font-semibold">Playwright Recording</span>
+                        <label class="switch">
+                            <input type="checkbox" id="toggle-mode-playwright" data-mode="playwright">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                 </div>
+            </div>
+        </div>
+    </div>
+    <div id="toast" class="toast"></div>
+
+    <script src="/static/settings.js"></script>
+</body>
+</html>

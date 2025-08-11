@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+playwright
+selenium
+webdriver-manager
+beautifulsoup4
+SQLAlchemy
+pydantic
+python-dotenv
+xhtml2pdf
+Pillow
+pyautogui
+requests
+Jinja2
