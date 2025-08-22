@@ -65,48 +65,282 @@ clipboard = {
 }
 
 JS_RECORDER_SCRIPT = """
-function getXPath(element) {
-    if (element.id !== '') {
-        const elems = document.querySelectorAll(`#${element.id}`);
-        if (elems.length === 1) return `//*[@id='${element.id}']`;
+(function(){
+  const RECORD_PREFIX = 'RECORDER_ACTION';
+
+  function safeEscapeId(id){
+    try { return (window.CSS && CSS.escape) ? CSS.escape(id) : String(id).replace(/'/g, "\\'"); }
+    catch(_) { return String(id).replace(/'/g, "\\'"); }
+  }
+
+  function getXPath(el){
+    if (!el) return '';
+    if (el.id) {
+      try {
+        const elems = el.ownerDocument.querySelectorAll('#' + safeEscapeId(el.id));
+        if (elems && elems.length === 1) return "//*[@id='" + el.id + "']";
+      } catch(_) {}
     }
-    if (element === document.body) return '/html/body';
-    if (element.parentNode === null) return `/${element.tagName.toLowerCase()}`;
+    if (!el.parentNode || !el.tagName) return '';
+    if (el === el.ownerDocument.body) return '/html/body';
     let ix = 0;
-    const siblings = element.parentNode.childNodes;
-    for (let i = 0; i < siblings.length; i++) {
-        const sibling = siblings[i];
-        if (sibling === element) return getXPath(element.parentNode) + '/' + element.tagName.toLowerCase() + '[' + (ix + 1) + ']';
-        if (sibling.nodeType === 1 && sibling.tagName === element.tagName) ix++;
+    const sib = el.parentNode.children || [];
+    for (let i=0;i<sib.length;i++){
+      if (sib[i] === el) return getXPath(el.parentNode) + '/' + el.tagName.toLowerCase() + '[' + (ix+1) + ']';
+      if (sib[i].tagName === el.tagName) ix++;
     }
     return '';
-}
-function sleep(ms) { const start = Date.now(); while (Date.now() < start + ms); }
-document.addEventListener('mousedown', function(e) {
-    const xpath = getXPath(e.target);
-    window.top.document.title = `RECORDER_ACTION::CLICK::${xpath}`;
-    sleep(200);
-}, true);
-document.addEventListener('input', function(e) {
-    if (e.target.tagName.toLowerCase() === 'input' || e.target.tagName.toLowerCase() === 'textarea') {
-        const xpath = getXPath(e.target);
-        window.top.document.title = `RECORDER_ACTION::TYPE::${xpath}::${e.target.value}`;
-    }
-}, true);
-document.addEventListener('change', function(e) {
-    if (e.target.tagName.toLowerCase() === 'select') {
-        const xpath = getXPath(e.target);
-        window.top.document.title = `RECORDER_ACTION::SELECT::${xpath}::${e.target.value}`;
-    }
-}, true);
-document.addEventListener('keydown', function(e) {
-    const specialKeys = ['Tab', 'Enter', 'Escape', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Backspace', 'Delete'];
-    if (specialKeys.includes(e.key)) {
-        const xpath = getXPath(document.activeElement);
-        window.top.document.title = `RECORDER_ACTION::KEYPRESS::${xpath}::${e.key}`;
-    }
-}, true);
+  }
+
+  function _signal(win, payload){
+    try{
+      var msg = RECORD_PREFIX + '::' + payload.action + '::' + (payload.selector||'') + '::' + (payload.value||'');
+      try { win.top.name = msg; } catch(_) {}
+      try { win.top.document.title = msg; } catch(_) {}
+      try { win.document.title = msg; } catch(_) {}
+    }catch(_){}
+  }
+
+  function installInto(win){
+    try {
+      if (!win || !win.document || win.__recInstalled) return;
+      const doc = win.document;
+      win.__recInstalled = true;
+      win.__rec = win.__rec || {};
+      win.__rec.ping = 1;
+      win.__rec.onSend = win.__rec.onSend || null;
+      win.__rec.last = win.__rec.last || null;
+
+      function sendStep(action, selector, value){
+        const payload = { action, selector: selector||'', value: value||'' };
+        _signal(win, payload);
+        try {
+          win.__rec.last = { ...payload, ts: Date.now() };
+          if (typeof win.__rec.onSend === 'function') win.__rec.onSend(payload);
+        } catch(_) {}
+      }
+      win.__rec.sendStep = sendStep;
+
+      function metaFor(el, menuParent){
+        if (!el || !(el instanceof Element)) return '';
+        const r = el.getBoundingClientRect();
+        const data = {
+          tag: (el.tagName || '').toLowerCase(),
+          id: el.id || '',
+          class: el.className || '',
+          role: el.getAttribute && (el.getAttribute('role') || ''),
+          ariaHaspopup: el.getAttribute && (el.getAttribute('aria-haspopup') || ''),
+          text: (el.innerText || '').trim().slice(0, 200),
+          href: (el.tagName === 'A' && el.href) ? el.href : '',
+          rect: { x: Math.round(r.x), y: Math.round(r.y), w: Math.round(r.width), h: Math.round(r.height) },
+          menuParentXPath: menuParent ? getXPath(menuParent) : ''
+        };
+        try { return JSON.stringify(data); } catch(_) { return ''; }
+      }
+
+      function findMenuParent(target){
+        if (!target || !(target instanceof Element)) return null;
+        const owner = target.closest('li.menuparent, li.sfHover, li.has-submenu, li.dropdown, li');
+        return owner || null;
+      }
+
+      let lastHoverKey = '';
+      let lastHoverAt = 0;
+      function emitHoverFor(target){
+        if (!target || !(target instanceof Element)) return;
+        const exactXPath = getXPath(target);
+        const menuParent = findMenuParent(target);
+        const key = exactXPath + '|' + (menuParent ? getXPath(menuParent) : '');
+        const now = Date.now();
+        if (key === lastHoverKey && (now - lastHoverAt) < 200) return;
+        lastHoverKey = key; lastHoverAt = now;
+        sendStep('HOVER', exactXPath, metaFor(target, menuParent));
+      }
+
+      function pickTarget(e){
+        return (e.composedPath && e.composedPath()[0]) || e.target;
+      }
+
+      // ---------- ROBUST CLICK / SUBMIT CAPTURE ----------
+      function isClickable(el){
+        if (!(el instanceof Element)) return false;
+        if (el.matches('button, input[type=submit], input[type=button], a[href], [role="button"]')) return true;
+        // common CSS button classes
+        const cls = String(el.className || '');
+        return /\\b(btn|button|form-submit|submit)\\b/i.test(cls);
+      }
+
+      function chooseClickableFromPath(path){
+        for (const node of path){
+          if (!(node instanceof Element)) continue;
+          if (isClickable(node)) return node;
+        }
+        // fall back to nearest form submitter if inside a form
+        const t0 = path[0];
+        if (t0 && t0.closest && t0.closest('form')) return t0.closest('form').querySelector('[type=submit]') || t0;
+        return (t0 instanceof Element) ? t0 : null;
+      }
+
+      let lastClickSig = '';
+      let lastPointerDownEl = null;
+      function emitClickFromEvent(e){
+        try{
+          const path = (e.composedPath && e.composedPath()) || [e.target];
+          const el = chooseClickableFromPath(path);
+          if (!el) return;
+          const selector = getXPath(el);
+          const sig = selector + '|' + e.type + '|' + (el.id||'') + '|' + (el.className||'');
+          const now = Date.now();
+          if (lastClickSig === sig && (now - (emitClickFromEvent._lastTs||0)) < 250) return;
+          emitClickFromEvent._lastTs = now;
+          lastClickSig = sig;
+          if (isClickable(el)) sendStep('CLICK', selector, '');
+        } catch(_){}
+      }
+
+      // capture at BOTH window and document (some apps stop at window)
+      ['pointerdown','mousedown','pointerup','click'].forEach((type)=>{
+        try { win.addEventListener(type, emitClickFromEvent, {capture:true, passive:true}); } catch(_){}
+        try { doc.addEventListener(type, emitClickFromEvent, {capture:true, passive:true}); } catch(_){}
+      });
+
+      // remember last pointerdown (used if page navigates before click fires)
+      function rememberPointerDown(e){
+        try{
+          const path = (e.composedPath && e.composedPath()) || [e.target];
+          const el = chooseClickableFromPath(path);
+          lastPointerDownEl = el || null;
+        }catch(_){}
+      }
+      try { win.addEventListener('pointerdown', rememberPointerDown, {capture:true, passive:true}); } catch(_){}
+      try { doc.addEventListener('pointerdown',  rememberPointerDown, {capture:true, passive:true}); } catch(_){}
+
+      // on unload, flush a synthetic CLICK if we had a pointerdown on a clickable
+      try {
+        win.addEventListener('beforeunload', function(){
+          try{
+            if (lastPointerDownEl && isClickable(lastPointerDownEl)){
+              const selector = getXPath(lastPointerDownEl);
+              sendStep('CLICK', selector, '');
+            }
+          }catch(_){}
+        }, {capture:true});
+      } catch(_){}
+
+      // SUBMIT (native event)
+      doc.addEventListener('submit', function(e){
+        try{
+          const form = e.target;
+          let sel = getXPath(form);
+          if (e.submitter) {
+            try { sel = getXPath(e.submitter); } catch(_) {}
+          }
+          const info = (form.action||'') + '|' + (form.method||'GET');
+          sendStep('SUBMIT_FORM', sel, info);
+        }catch(_){}
+      }, { capture:true });
+
+      // SUBMIT (programmatic form.submit())
+      try {
+        const _submit = HTMLFormElement.prototype.submit;
+        HTMLFormElement.prototype.submit = function(){
+          try {
+            const info = (this.action||'') + '|' + (this.method||'GET');
+            sendStep('SUBMIT_FORM', getXPath(this), info);
+          } catch(_) {}
+          return _submit.apply(this, arguments);
+        };
+      } catch(_){}
+
+      // ---------- INPUT / SELECT / KEYS ----------
+      doc.addEventListener('input', function(e){
+        const t = pickTarget(e); if (!t) return;
+        const tag = (t.tagName||'').toLowerCase();
+        if (tag === 'input' || tag === 'textarea'){
+          sendStep('TYPE', getXPath(t), t.value);
+        }
+      }, true);
+
+      doc.addEventListener('change', function(e){
+        const t = pickTarget(e); if (!t) return;
+        if ((t.tagName||'').toLowerCase() === 'select'){
+          sendStep('SELECT', getXPath(t), t.value);
+        }
+      }, true);
+
+      doc.addEventListener('keydown', function(e){
+        const special = {Tab:1,Enter:1,Escape:1,ArrowUp:1,ArrowDown:1,ArrowLeft:1,ArrowRight:1,Backspace:1,Delete:1};
+        if (!special[e.key]) return;
+        const active = doc.activeElement;
+        sendStep('KEYPRESS', getXPath(active), e.key);
+      }, true);
+
+      // HOVER
+      doc.addEventListener('pointermove', (e) => emitHoverFor(pickTarget(e)), { capture: true, passive: true });
+      doc.addEventListener('mouseover',  (e) => emitHoverFor(pickTarget(e)), { capture: true, passive: true });
+      doc.addEventListener('mouseenter', (e) => emitHoverFor(pickTarget(e)), { capture: true, passive: true });
+
+      // SPA history hooks (in this window)
+      try {
+        const _pushState = win.history.pushState;
+        const _replaceState = win.history.replaceState;
+        function emitNav(){ sendStep('NAVIGATE', '', win.location.href); }
+        win.history.pushState = function(){
+          const r = _pushState.apply(this, arguments);
+          setTimeout(emitNav, 0);
+          return r;
+        };
+        win.history.replaceState = function(){
+          const r = _replaceState.apply(this, arguments);
+          setTimeout(emitNav, 0);
+          return r;
+        };
+        win.addEventListener('popstate', emitNav, true);
+      } catch(_) {}
+
+      // Mutation observer to catch menu class toggles
+      try {
+        const mo = new MutationObserver((muts) => {
+          for (const m of muts){
+            if (m.type === 'attributes' && (m.attributeName === 'class' || m.attributeName === 'style')){
+              const el = m.target;
+              if (!(el instanceof Element)) continue;
+              const li = el.closest && el.closest('li');
+              if (li) emitHoverFor(li);
+            }
+          }
+        });
+        mo.observe(doc.documentElement, { subtree: true, attributes: true, attributeFilter: ['class','style'] });
+      } catch(_) {}
+    } catch(_) {}
+  }
+
+  function installIntoAllFrames(rootWin){
+    installInto(rootWin);
+    try {
+      const frames = rootWin.document.querySelectorAll('iframe');
+      frames.forEach((ifr) => {
+        try {
+          if (ifr.contentWindow && ifr.contentWindow.document) {
+            installInto(ifr.contentWindow);
+          }
+        } catch(_) { /* cross-origin, ignore */ }
+      });
+    } catch(_) {}
+  }
+
+  try {
+    installIntoAllFrames(window);
+    setInterval(function(){
+      try { installIntoAllFrames(window); } catch(_){}
+    }, 1000);
+  } catch(_) {}
+})();
 """
+
+
+
+
 
 # --- CORRECTED: Async Playwright Recorder Process ---
 async def async_playwright_recorder_process(url: str, message_queue: mp.Queue):
@@ -548,6 +782,60 @@ class RecorderThread(threading.Thread):
             self.send_message_to_ws({"type": "step", "data": self.last_typing_step, "mode": self.mode})
             self.last_typing_step = None
 
+    def _drain_signal(self):
+        """Read and clear recorder signals from title or window.name."""
+        sig = None
+        # 1) Check the title channel
+        try:
+            t = self.driver.title or ""
+            if t.startswith("RECORDER_ACTION::"):
+                sig = t
+                # restore title
+                try:
+                    self.driver.execute_script(
+                        f"window.top.document.title = {json.dumps(self.original_title)};"
+                    )
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+        # 2) If not found, check window.name channel
+        if not sig:
+            try:
+                nm = self.driver.execute_script("return window.name || ''") or ""
+                if nm.startswith("RECORDER_ACTION::"):
+                    sig = nm
+                    try:
+                        self.driver.execute_script("window.top.name='';")
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+        return sig
+
+    def _wait_dom_ready(self, timeout=10):
+        end = time.time() + timeout
+        while time.time() < end:
+            try:
+                rs = self.driver.execute_script("return document.readyState")
+                if rs in ("interactive", "complete"):
+                    return True
+            except Exception:
+                pass
+            time.sleep(0.1)
+        return False
+
+    def _inject_recorder(self):
+        # try a couple of times to handle immediate re-renders
+        for _ in range(3):
+            try:
+                self.driver.execute_script(JS_RECORDER_SCRIPT)
+                return True
+            except Exception:
+                time.sleep(0.2)
+        return False
+
     def run(self):
         service = None
         try:
@@ -583,47 +871,95 @@ class RecorderThread(threading.Thread):
             self.original_title = self.driver.title
 
             self.send_message_to_ws({"type": "status", "data": "Injecting recorder script..."})
-            self.driver.execute_script(JS_RECORDER_SCRIPT)
+            self._wait_dom_ready(10)
+            self._inject_recorder()
 
             self.send_message_to_ws({"type": "status", "data": "Recording... Perform actions in the browser."})
 
             while not self.stop_event.is_set():
                 self.pause_event.wait()
                 try:
-                    if not self.driver.window_handles: break
+                    if not self.driver.window_handles:
+                        break
 
-                    current_title = self.driver.title
-                    if current_title.startswith("RECORDER_ACTION::"):
-                        action_detail = current_title.replace("RECORDER_ACTION::", "")
+                    # read any signal from title or window.name
+                    sig = self._drain_signal()
+                    if sig:
+                        action_detail = sig.replace("RECORDER_ACTION::", "")
                         parts = action_detail.split("::")
-                        action_type, selector, value = parts[0], parts[1], "::".join(parts[2:])
-                        self.driver.execute_script(f"window.top.document.title = '{self.original_title}';")
+                        action_type = parts[0] if len(parts) > 0 else ""
+                        selector = parts[1] if len(parts) > 1 else ""
+                        value = "::".join(parts[2:]) if len(parts) > 2 else ""
 
                         if action_type == "TYPE":
-                            if self.typing_timer: self.typing_timer.cancel()
+                            if self.typing_timer:
+                                self.typing_timer.cancel()
                             if self.last_typing_step and self.last_typing_step["selector"] == selector:
                                 self.last_typing_step["value"] = value
                             else:
                                 self._flush_typing_step()
-                                self.last_typing_step = {"id": f"step-{uuid.uuid4().hex[:6]}", "type": "ACTION", "action": "TYPE", "selector": selector, "value": value}
+                                self.last_typing_step = {
+                                    "id": f"step-{uuid.uuid4().hex[:6]}",
+                                    "type": "ACTION",
+                                    "action": "TYPE",
+                                    "selector": selector,
+                                    "value": value
+                                }
                             self.typing_timer = threading.Timer(1.0, self._flush_typing_step)
                             self.typing_timer.start()
                         else:
                             self._flush_typing_step()
-                            new_step = {"id": f"step-{uuid.uuid4().hex[:6]}", "type": "ACTION", "action": action_type, "selector": selector, "value": value}
+                            new_step = {
+                                "id": f"step-{uuid.uuid4().hex[:6]}",
+                                "type": "ACTION",
+                                "action": action_type,
+                                "selector": selector,
+                                "value": value
+                            }
                             self.send_message_to_ws({"type": "step", "data": new_step, "mode": self.mode})
                     
+                    # Heartbeat: if recorder missing (new document after login), re-inject
+                    ok = True
+                    try:
+                        ok = self.driver.execute_script("return !!(window.__rec && window.__rec.ping===1)")
+                    except WebDriverException:
+                    # Likely mid-navigation; skip this tick
+                        ok = True
+                    if not ok:
+                        self._wait_dom_ready(10)
+                        self._inject_recorder()
+
+                    if not hasattr(self, "_last_inject_ts"):
+                        self._last_inject_ts = 0
+                        now = time.time()
+                    if not ok and (now - self._last_inject_ts) > 1.0:
+                        self._wait_dom_ready(10)
+                    if self._inject_recorder():
+                        self._last_inject_ts = now
+
+                    # URL change detection (incl. SPA)
                     current_url = self.driver.current_url.rstrip('/')
                     if current_url != self.last_known_url:
                         self._flush_typing_step()
                         self.send_message_to_ws({
                             "type": "step",
-                            "data": {"id": f"step-{uuid.uuid4().hex[:6]}", "type": "ACTION", "action": "NAVIGATE", "selector": "", "value": current_url},
+                            "data": {
+                                "id": f"step-{uuid.uuid4().hex[:6]}",
+                                "type": "ACTION",
+                                "action": "NAVIGATE",
+                                "selector": "",
+                                "value": current_url
+                            },
                             "mode": self.mode
                         })
                         self.last_known_url = current_url
 
-                except WebDriverException: break
+                         # Wait for the new doc and re-inject recorder
+                        self._wait_dom_ready(10)
+                        self._inject_recorder()
+
+                except WebDriverException:
+                    break
                 time.sleep(0.1)
         except Exception as e:
             print(f"RECORDER ERROR: {e}\n{traceback.format_exc()}")
@@ -639,6 +975,7 @@ class RecorderThread(threading.Thread):
                 asyncio.run_coroutine_threadsafe(self.websocket.close(), self.loop)
 
             print("Recorder thread finished.")
+
 
 
 class PlaybackRunnerThread(threading.Thread):

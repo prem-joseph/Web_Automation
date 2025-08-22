@@ -109,6 +109,7 @@ def run_selenium_steps(case_id: str, steps: list, headless: bool, project_name: 
     if capture_all:
         os.makedirs(screenshot_dir, exist_ok=True)
 
+    # ---------- helpers ----------
     def _log_step(message):
         logging.info(f"[{time.strftime('%H:%M:%S')}] {message}")
 
@@ -119,18 +120,19 @@ def run_selenium_steps(case_id: str, steps: list, headless: bool, project_name: 
         _log_step("Page load complete.")
 
     def _bring_window_to_front(pid):
-        if headless or os.name != 'nt': return
+        if headless or os.name != 'nt':
+            return
         try:
             hwnds = []
-            def callback(hwnd, hwnds):
+            def callback(hwnd, hwnds_list):
                 if win32gui.IsWindowVisible(hwnd) and win32gui.IsWindowEnabled(hwnd):
                     _, found_pid = win32process.GetWindowThreadProcessId(hwnd)
                     if found_pid == pid:
-                        hwnds.append(hwnd)
+                        hwnds_list.append(hwnd)
                 return True
-            
+
             win32gui.EnumWindows(callback, hwnds)
-            
+
             if hwnds:
                 hwnd = hwnds[0]
                 win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
@@ -144,15 +146,26 @@ def run_selenium_steps(case_id: str, steps: list, headless: bool, project_name: 
             _log_step(f"Could not bring window to front using pywin32: {e}")
 
     def _highlight_element(driver_instance, element):
-        if headless: return
+        if headless:
+            return
         try:
-            original_style = driver_instance.execute_script("return arguments[0].getAttribute('style');", element)
-            driver_instance.execute_script("arguments[0].setAttribute('style', arguments[1]);", element, "border: 3px solid red; box-shadow: 0 0 10px red;")
+            original_style = driver_instance.execute_script(
+                "return arguments[0].getAttribute('style');", element
+            )
+            driver_instance.execute_script(
+                "arguments[0].setAttribute('style', arguments[1]);",
+                element,
+                "border: 3px solid red; box-shadow: 0 0 10px red;"
+            )
             time.sleep(0.5)
-            driver_instance.execute_script("arguments[0].setAttribute('style', arguments[1]);", element, original_style)
+            driver_instance.execute_script(
+                "arguments[0].setAttribute('style', arguments[1]);",
+                element,
+                original_style
+            )
         except Exception as e:
             _log_step(f"Could not highlight element: {e}")
-            
+
     def _take_screenshot(step_index, action_name, status):
         if capture_all:
             filename = f"step_{step_index + 1}_{action_name}_{status}.png"
@@ -163,6 +176,55 @@ def run_selenium_steps(case_id: str, steps: list, headless: bool, project_name: 
             except Exception as e:
                 _log_step(f"Could not save screenshot using pyautogui: {e}")
 
+    def _wait_clickable(xp, timeout=15):
+        return WebDriverWait(driver, timeout).until(
+            EC.element_to_be_clickable((By.XPATH, xp))
+        )
+
+    def _safe_click(xp):
+        el = _wait_clickable(xp)
+        try:
+            driver.execute_script("arguments[0].scrollIntoView({block:'center',inline:'center'});", el)
+        except Exception:
+            pass
+        try:
+            el.click()
+            return True
+        except (ElementClickInterceptedException, ElementNotInteractableException):
+            try:
+                ActionChains(driver).move_to_element(el).pause(0.1).click().perform()
+                return True
+            except Exception:
+                pass
+        try:
+            driver.execute_script("arguments[0].click();", el)
+            return True
+        except Exception:
+            # last resort: submit the nearest form if this is a submit control
+            try:
+                form = el.find_element(By.XPATH, "ancestor::form[1]")
+                driver.execute_script("arguments[0].submit();", form)
+                return True
+            except Exception:
+                return False
+
+    def _submit_nearest_form(xp):
+        # Try clicking the submitter; if that fails, submit the form directly.
+        if _safe_click(xp):
+            return True
+        try:
+            el = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, xp)))
+            form = el.find_element(By.XPATH, "ancestor::form[1]")
+            driver.execute_script("arguments[0].submit();", form)
+            return True
+        except Exception:
+            try:
+                driver.switch_to.active_element.send_keys(Keys.ENTER)
+                return True
+            except Exception:
+                return False
+    # ---------- end helpers ----------
+
     try:
         if override_url:
             for i, step in enumerate(steps):
@@ -170,57 +232,75 @@ def run_selenium_steps(case_id: str, steps: list, headless: bool, project_name: 
                     _log_step(f"Overriding original URL '{step['value']}' with '{override_url}'.")
                     steps[i]['value'] = override_url
                     break
-        
+
         options = ChromeOptions()
         if headless:
             options.add_argument("--headless")
             options.add_argument("--window-size=1920,1080")
-        
-        options.add_experimental_option("w3c", "true")
-        
+        options.add_experimental_option("w3c", True)
+
         service = ChromeService()
         driver = webdriver.Chrome(service=service, options=options)
         browser_pid = service.process.pid
-        
+
         if not headless:
             driver.maximize_window()
-        
+
         for i, step in enumerate(steps):
-            action = step.get('action', '')
+            action = step.get('action', '').upper()
             selector = step.get('selector', '')
             value = step.get('value', '')
             step_name = action or step.get('validation_type', 'Unknown Step')
             _log_step(f"Executing step {i+1}: {step_name}")
 
             try:
-                _wait_for_page_load(driver)
-                _bring_window_to_front(browser_pid)
-
-                element = None
-                if selector:
-                    element = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, selector)))
-                
-                if element:
-                    _highlight_element(driver, element)
-
                 if action == 'NAVIGATE':
                     driver.get(value)
+                    _wait_for_page_load(driver)
                     _bring_window_to_front(browser_pid)
-                elif action == 'CLICK':
-                    element.click()
-                elif action == 'TYPE':
-                    element.clear()
-                    element.send_keys(value)
-                
+                else:
+                    _wait_for_page_load(driver)
+                    _bring_window_to_front(browser_pid)
+
+                    element = None
+                    if selector and action not in ['SLEEP', 'WAIT']:
+                        element = WebDriverWait(driver, 10).until(
+                            EC.presence_of_element_located((By.XPATH, selector))
+                        )
+                        _highlight_element(driver, element)
+
+                    if action == 'CLICK':
+                        if not _safe_click(selector):
+                            raise Exception("Click failed (all fallbacks).")
+
+                    elif action in ('SUBMIT', 'SUBMIT_FORM'):
+                        if not _submit_nearest_form(selector):
+                            raise Exception("Submit failed (all fallbacks).")
+
+                    elif action == 'TYPE':
+                        element.clear()
+                        element.send_keys(value)
+
+                    elif action == 'HOVER':
+                        ActionChains(driver).move_to_element(element).perform()
+
+                    elif action == 'SELECT':
+                        Select(element).select_by_value(value)
+
+                    elif action in ['SLEEP', 'WAIT']:
+                        seconds = float(value) if value else 1.0
+                        _log_step(f"Sleeping for {seconds} second(s)...")
+                        time.sleep(seconds)
+
                 _log_step(f"Step {i+1} PASSED")
                 _take_screenshot(i, step_name, "PASSED")
 
             except Exception as e:
-                error_str = str(e).split('\\n')[0]
+                error_str = str(e).split('\n')[0]
                 _log_step(f"Step {i+1} FAILED: {error_str}")
                 _take_screenshot(i, step_name, "FAILED")
                 break
-        
+
         _log_step("--- Selenium playback finished ---")
 
     except Exception as e:
@@ -228,6 +308,7 @@ def run_selenium_steps(case_id: str, steps: list, headless: bool, project_name: 
     finally:
         if driver:
             driver.quit()
+
 
 # --- Main Execution Block ---
 if __name__ == "__main__":
